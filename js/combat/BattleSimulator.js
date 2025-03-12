@@ -93,7 +93,7 @@ class BattleSimulator {
                 playerDamageDealt += this.simulateTeamAttack(playerTeam, enemyTeam);
                 
                 // Check if enemy team is defeated
-                if (enemyTeam.every(m => m.health <= 0) {
+                if (enemyTeam.every(m => m.health <= 0)) {
                     simulateTurn(); // Skip to end condition check
                     return;
                 }
@@ -199,13 +199,8 @@ class BattleSimulator {
             }
         }
         
-        // Round to nearest integer
-        coins = Math.floor(coins);
-        
         return {
-            coins,
-            waveCompleted: result.victory,
-            waveNumber: currentWave
+            coins: Math.floor(coins)
         };
     }
 }
