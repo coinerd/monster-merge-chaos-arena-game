@@ -205,31 +205,4 @@ class GridManager {
         
         return gridState;
     }
-    
-    // Clean up resources when no longer needed
-    dispose() {
-        this.cellManager.dispose();
-        
-        // Remove all monsters from the scene
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
-                if (this.grid[row][col]) {
-                    this.scene.remove(this.grid[row][col].mesh);
-                    // Dispose geometries and materials
-                    if (this.grid[row][col].mesh.geometry) {
-                        this.grid[row][col].mesh.geometry.dispose();
-                    }
-                    if (this.grid[row][col].mesh.material) {
-                        if (Array.isArray(this.grid[row][col].mesh.material)) {
-                            this.grid[row][col].mesh.material.forEach(m => m.dispose());
-                        } else {
-                            this.grid[row][col].mesh.material.dispose();
-                        }
-                    }
-                }
-            }
-        }
-        
-        this.grid = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill(null));
-    }
 }
