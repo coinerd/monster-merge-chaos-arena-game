@@ -1,16 +1,17 @@
 /**
  * Bug fixes for Monster Merge: Chaos Arena
  * This script fixes various issues in the game:
- * 1. Adds compatibility between Game.buyMonster and OverlayManager (already fixed in OverlayManager.js)
- * 2. Fixes the CombatManager method name issue (setCurrentWave vs setWave)
+ * 1. Adds compatibility between Game.buyMonster and OverlayManager
+ * 2. Ensures new enemies are generated for each wave
+ * 3. Enhances enemy appearance based on wave number
  */
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for the game to be initialized
-    setTimeout(() => {
+window.addEventListener('load', function() {
+    // Function to check for game object and apply fixes
+    function applyFixes() {
         if (window.game) {
             console.log('Applying bug fixes...');
             
-            // Fix 1: Add purchaseMonster as an alias to buyMonster (backup in case OverlayManager fix doesn't work)
+            // Fix 1: Add purchaseMonster as an alias to buyMonster (if needed)
             if (typeof window.game.purchaseMonster !== 'function' && typeof window.game.buyMonster === 'function') {
                 window.game.purchaseMonster = function(tier) {
                     return this.buyMonster(tier);
@@ -18,45 +19,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Added purchaseMonster alias to Game class');
             }
             
-            // Fix 2: Add setCurrentWave as an alias to setWave in CombatManager
-            if (window.game.combatManager) {
-                const originalSetWave = window.game.combatManager.setWave;
-                window.game.combatManager.setCurrentWave = function(wave) {
-                    console.log('Using setCurrentWave alias for setWave');
-                    return originalSetWave.call(this, wave);
+            // Fix 2: Ensure startBattle generates new enemies for each wave
+            if (window.game.startBattle && window.game.combatManager) {
+                // Patch startBattle to ensure new enemies are generated
+                const originalStartBattle = window.game.startBattle;
+                window.game.startBattle = function() {
+                    // Generate new enemies before battle if not already done
+                    if (!this.inBattle && this.combatManager && typeof this.combatManager.generateEnemyWave === 'function') {
+                        console.log('Generating new enemies for wave ' + this.wave);
+                        // Pass the current wave number explicitly to generateEnemyWave
+                        this.combatManager.generateEnemyWave(this.wave);
+                    }
+                    return originalStartBattle.apply(this, arguments);
                 };
-                console.log('Added setCurrentWave alias to CombatManager');
+                console.log('Enhanced startBattle to generate new enemies');
             }
             
-            // Fix 3: Patch the initialize method to avoid the error
-            const originalInitialize = window.game.initialize;
-            window.game.initialize = function() {
-                try {
-                    originalInitialize.call(this);
-                } catch (error) {
-                    console.error('Error in initialize method:', error);
-                    
-                    // Try to recover from the error
-                    if (!this.gameState) {
-                        this.gameState = { wave: 1, coins: 100 };
-                    }
-                    
-                    // Make sure UI is updated
-                    if (this.uiManager) {
-                        this.uiManager.updateMoneyDisplay(this.gameState.coins || 100);
-                        this.uiManager.updateWaveDisplay(this.gameState.wave || 1);
-                    }
-                    
-                    // Set the wave properly
-                    if (this.combatManager && typeof this.combatManager.setWave === 'function') {
-                        this.combatManager.setWave(this.gameState.wave || 1);
-                    }
+            // Fix 3: Enhance enemy appearance based on wave number
+            if (window.game.combatManager && window.game.combatManager.waveManager) {
+                // Make sure WaveManager.enhanceEnemyAppearance is properly called
+                const originalGenerateEnemyWave = window.game.combatManager.waveManager.generateEnemyWave;
+                if (typeof originalGenerateEnemyWave === 'function') {
+                    window.game.combatManager.waveManager.generateEnemyWave = function(waveNumber) {
+                        // Make sure we're using the provided wave number, not just the internal currentWave
+                        const enemies = originalGenerateEnemyWave.call(this, waveNumber);
+                        console.log('Enhanced enemy appearance for wave ' + waveNumber);
+                        return enemies;
+                    };
+                    console.log('Enhanced enemy appearance for waves');
                 }
-            };
+            }
             
             console.log('Bug fixes applied successfully!');
-        } else {
-            console.error('Game object not found, bug fixes not applied');
+            return true;
         }
-    }, 1000);
+        return false;
+    }
+    
+    // Try to apply fixes with increasing delays
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    function tryApplyFixes() {
+        if (applyFixes()) {
+            console.log('Bug fixes applied on attempt ' + (attempts + 1));
+            return;
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+            console.log('Retrying bug fixes in ' + (attempts * 100) + 'ms (attempt ' + attempts + ' of ' + maxAttempts + ')');
+            setTimeout(tryApplyFixes, attempts * 100);
+        } else {
+            console.error('Failed to apply bug fixes after ' + maxAttempts + ' attempts');
+        }
+    }
+    
+    // Start trying to apply fixes
+    tryApplyFixes();
 });

@@ -196,4 +196,18 @@ class HealthBarManager {
             y: (tempVector.y * -0.5 + 0.5) * renderer.domElement.clientHeight
         };
     }
+    
+    /**
+     * Hide all health bars
+     */
+    hideAllHealthBars() {
+        this.containerElement.style.display = 'none';
+    }
+    
+    /**
+     * Show all health bars
+     */
+    showAllHealthBars() {
+        this.containerElement.style.display = 'block';
+    }
 }

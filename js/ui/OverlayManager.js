@@ -84,6 +84,11 @@ class OverlayManager {
     openShop(availableMonsters) {
         if (!this.elements.shopOverlay || !this.elements.shopItems) return;
         
+        // Hide health bars when shop is opened
+        if (this.gameManager && this.gameManager.uiManager && this.gameManager.uiManager.healthBarManager) {
+            this.gameManager.uiManager.healthBarManager.hideAllHealthBars();
+        }
+        
         const unlockedTiers = availableMonsters || [];
         const coins = this.gameManager ? this.gameManager.getCoins() : 0;
         
@@ -125,6 +130,11 @@ class OverlayManager {
     closeShop() {
         if (this.elements.shopOverlay) {
             this.elements.shopOverlay.classList.add('hidden');
+            
+            // Show health bars when shop is closed
+            if (this.gameManager && this.gameManager.uiManager && this.gameManager.uiManager.healthBarManager) {
+                this.gameManager.uiManager.healthBarManager.showAllHealthBars();
+            }
         }
     }
     

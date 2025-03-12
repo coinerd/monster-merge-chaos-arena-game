@@ -98,7 +98,7 @@ class Game {
             this.coins = this.gameState.coins || 100;
             this.wave = this.gameState.wave || 1;
             this.highestTier = this.gameState.highestTier || 1;
-            this.unlockedMonsters = this.gameState.unlockedMonsters || [1, 2, 3];
+            this.unlockedMonsters = this.gameState.unlockedMonsters || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
             
             // Update combat manager with current wave
             this.combatManager.setWave(this.wave);
@@ -107,7 +107,7 @@ class Game {
             this.coins = 100;
             this.wave = 1;
             this.highestTier = 1;
-            this.unlockedMonsters = [1, 2, 3];
+            this.unlockedMonsters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         }
     }
     
@@ -150,6 +150,9 @@ class Game {
         
         // Make sure combat manager has the correct wave
         this.combatManager.setWave(this.wave);
+        
+        // Generate new enemies for this wave
+        this.combatManager.generateEnemyWave();
         
         // Start the battle
         this.combatManager.startBattle(playerMonsters)
@@ -205,7 +208,7 @@ class Game {
         this.coins = 100;
         this.wave = 1;
         this.highestTier = 1;
-        this.unlockedMonsters = [1, 2, 3];
+        this.unlockedMonsters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         
         // Update UI
         this.uiManager.updateMoneyDisplay(this.coins);
@@ -331,7 +334,7 @@ class Game {
      * @returns {Array} Array of unlocked monster tiers
      */
     getUnlockedTiers() {
-        return this.unlockedMonsters || [1, 2, 3];
+        return this.unlockedMonsters || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
     }
     
     /**
@@ -345,7 +348,7 @@ class Game {
         this.coins = 100;
         this.wave = 1;
         this.highestTier = 1;
-        this.unlockedMonsters = [1, 2, 3];
+        this.unlockedMonsters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         
         // Update UI
         this.uiManager.updateMoneyDisplay(this.coins);

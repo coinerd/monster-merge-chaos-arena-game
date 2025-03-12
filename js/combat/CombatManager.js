@@ -68,7 +68,7 @@ class CombatManager {
                                 victory: result.victory,
                                 remainingMonsters: result.remainingPlayerMonsters,
                                 log: this.battleSimulator.getLog(),
-                                rewards: this.battleSimulator.calculateRewards(
+                                rewards: this.calculateRewards(
                                     result, 
                                     this.waveManager.getCurrentWave()
                                 )
@@ -80,10 +80,49 @@ class CombatManager {
     }
     
     /**
+     * Calculate rewards based on battle results
+     * @param {Object} result - Battle result data
+     * @param {number} currentWave - Current wave number
+     * @returns {Object} Rewards object
+     */
+    calculateRewards(result, currentWave) {
+        // Base reward scales with wave number
+        const baseReward = 15 * currentWave;
+        let coins = baseReward;
+        
+        // Bonus for remaining player monsters
+        const remainingMonsters = result.remainingPlayerMonsters || result.remainingMonsters || [];
+        coins += remainingMonsters.length * 10;
+        
+        // Bonus for victory
+        if (result.victory) {
+            // Victory bonus increases with wave number
+            coins += baseReward * 1.5;
+            
+            // Extra bonus for higher waves
+            if (currentWave > 5) {
+                coins += Math.floor(currentWave * 10);
+            }
+            
+            // Mark wave as completed
+            return {
+                coins: Math.floor(coins),
+                waveCompleted: true
+            };
+        } else {
+            // Reduced reward for defeat
+            return {
+                coins: Math.floor(coins * 0.3),
+                waveCompleted: false
+            };
+        }
+    }
+    
+    /**
      * Generate enemies for the current wave
      */
     generateEnemyWave() {
-        return this.waveManager.generateEnemyWave();
+        this.enemyMonsters = this.waveManager.generateEnemyWave(this.currentWave);
     }
     
     /**
@@ -122,5 +161,23 @@ class CombatManager {
      */
     setCurrentWave(wave) {
         this.waveManager.setCurrentWave(wave);
+    }
+    
+    /**
+     * Check if a battle is currently in progress
+     * @returns {boolean} True if a battle is in progress
+     */
+    isBattleInProgress() {
+        return this.isInBattle;
+    }
+    
+    /**
+     * Update battle animations
+     * @param {number} delta - Time delta for animation
+     */
+    update(delta) {
+        if (this.battleAnimator && this.isInBattle) {
+            this.battleAnimator.update(delta);
+        }
     }
 }
