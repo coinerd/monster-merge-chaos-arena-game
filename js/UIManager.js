@@ -201,34 +201,33 @@ class UIManager {
         const duration = 500; // milliseconds
         
         const animate = () => {
-            const elapsed = Date.now() - startTime;
+            const currentTime = Date.now();
+            const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // Ease-out function for smoother animation
-            const easeOut = 1 - Math.pow(1 - progress, 3);
+            // Use easing function for smoother animation
+            const eased = this.easeOutBack(progress);
             
-            // Scale up the monster
-            monster.mesh.scale.set(
-                originalScale.x * easeOut,
-                originalScale.y * easeOut,
-                originalScale.z * easeOut
-            );
-            
-            // Update the health bar
-            this.updateMonsterHealthBar(monster);
+            // Update scale
+            const scale = originalScale.clone().multiplyScalar(eased);
+            monster.mesh.scale.copy(scale);
             
             if (progress < 1) {
                 requestAnimationFrame(animate);
-            } else {
-                // Reset to original scale
-                monster.mesh.scale.copy(originalScale);
-                
-                // Final update of the health bar
-                this.updateMonsterHealthBar(monster);
             }
         };
         
-        // Start the animation
         requestAnimationFrame(animate);
+    }
+    
+    /**
+     * Easing function for smooth animations
+     * @param {number} x - Progress from 0 to 1
+     * @returns {number} Eased value
+     */
+    easeOutBack(x) {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
     }
 }
