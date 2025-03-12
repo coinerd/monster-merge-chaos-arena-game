@@ -265,7 +265,7 @@ class Game {
         
         // Create the monster and place it in the grid
         const monster = this.monsterManager.createMonster(tier);
-        this.gridManager.placeMonsterInGrid(monster, emptyCell.row, emptyCell.col);
+        this.gridManager.placeMonsterAt(monster, emptyCell.row, emptyCell.col);
         
         // Deduct cost
         this.coins -= cost;
