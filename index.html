@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Merge: Chaos Arena</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-canvas"></div>
+        <div id="ui-overlay">
+            <div id="top-bar">
+                <div id="money">$<span id="money-display">0</span></div>
+                <div id="wave">Wave <span id="wave-display">1</span></div>
+            </div>
+            <div id="battle-button" class="button">BATTLE</div>
+            <div id="shop-button" class="button">SHOP</div>
+            <div id="restart-button" class="button">RESTART</div>
+        </div>
+        
+        <div id="notification-container"></div>
+        
+        <div id="shop-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h2>Monster Shop</h2>
+                <div id="shop-items"></div>
+                <div id="close-shop" class="button">CLOSE</div>
+            </div>
+        </div>
+        
+        <div id="battle-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h2>Battle Results</h2>
+                <div id="battle-results"></div>
+                <div id="close-battle" class="button">CONTINUE</div>
+            </div>
+        </div>
+        
+        <div id="confirmation-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h2 id="confirmation-title">Confirmation</h2>
+                <div id="confirmation-message"></div>
+                <div class="button-row">
+                    <div id="confirm-yes" class="button">YES</div>
+                    <div id="confirm-no" class="button">NO</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="game-over-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h2>Game Over!</h2>
+                <div id="game-over-message"></div>
+                <div id="game-over-wave" class="wave-display"></div>
+                <div id="restart-game" class="button">RESTART GAME</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    
+    <!-- Three.js Loaders -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/DRACOLoader.js"></script>
+    
+    <!-- Game Modules -->
+    <script src="js/StorageManager.js"></script>
+    <script src="js/SceneManager.js"></script>
+    
+    <!-- Grid Modules - These must be loaded before GridManager.js -->
+    <script src="js/grid/GridCellManager.js"></script>
+    <script src="js/grid/MergeManager.js"></script>
+    <script src="js/grid/DragDropManager.js"></script>
+    <script src="js/GridManager.js"></script>
+    
+    <!-- Combat Modules - These must be loaded before CombatManager.js -->
+    <script src="js/combat/WaveManager.js"></script>
+    <script src="js/combat/BattleSimulator.js"></script>
+    <script src="js/combat/BattleAnimator.js"></script>
+    <script src="js/CombatManager.js"></script>
+    
+    <!-- UI Modules - These must be loaded before UIManager.js -->
+    <script src="js/ui/NotificationManager.js"></script>
+    <script src="js/ui/OverlayManager.js"></script>
+    <script src="js/ui/HealthBarManager.js"></script>
+    <script src="js/ui/AnimationManager.js"></script>
+    <script src="js/UIManager.js"></script>
+    
+    <!-- Monster Modules - New modular implementation -->
+    <script src="js/monster/MonsterTypes.js"></script>
+    <script src="js/monster/MonsterModels.js"></script>
+    <script src="js/monster/MonsterGeometryFactory.js"></script>
+    <script src="js/monster/MonsterFactory.js"></script>
+    <script src="js/monster/MonsterManager.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
