@@ -199,9 +199,9 @@ class CombatManager {
     
     /**
      * Set the current wave number
-     * @param {number} wave - Wave number to set
+     * @param {number} wave - Wave number
      */
-    setCurrentWave(wave) {
+    setWave(wave) {
         this.currentWave = wave;
     }
     
@@ -209,23 +209,7 @@ class CombatManager {
      * Get the current wave number
      * @returns {number} Current wave number
      */
-    getCurrentWave() {
+    getWave() {
         return this.currentWave;
-    }
-    
-    /**
-     * Preview the upcoming enemy wave
-     * @returns {Array} Array of simplified enemy data for display
-     */
-    previewNextWave() {
-        return this.waveManager.previewNextWave();
-    }
-    
-    /**
-     * Advance to the next wave
-     */
-    advanceWave() {
-        this.currentWave++;
-        this.waveManager.advanceWave();
     }
 }
