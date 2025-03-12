@@ -212,4 +212,15 @@ class CombatManager {
     getWave() {
         return this.currentWave;
     }
+    
+    /**
+     * Advance to the next wave
+     */
+    advanceWave() {
+        this.currentWave++;
+        // Clear any existing enemies
+        this.clearEnemies();
+        // Generate new enemies for the next wave
+        this.generateEnemyWave();
+    }
 }

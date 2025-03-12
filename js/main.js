@@ -32,7 +32,7 @@ class Game {
         
         // Initialize the combat manager
         this.combatManager = new CombatManager(this.sceneManager.scene, this.monsterManager);
-        this.combatManager.setCurrentWave(this.gameState.wave);
+        this.combatManager.setWave(this.gameState.wave);
         
         // Initialize the UI manager with the scene manager and this game instance
         this.uiManager = new UIManager(this.sceneManager, this);
@@ -101,7 +101,7 @@ class Game {
             this.unlockedMonsters = this.gameState.unlockedMonsters || [1, 2, 3];
             
             // Update combat manager with current wave
-            this.combatManager.setCurrentWave(this.wave);
+            this.combatManager.setWave(this.wave);
         } else {
             // Default values
             this.coins = 100;
@@ -149,7 +149,7 @@ class Game {
         this.uiManager.showNotification(`Battle against Wave ${this.wave} begins!`, 'info');
         
         // Make sure combat manager has the correct wave
-        this.combatManager.setCurrentWave(this.wave);
+        this.combatManager.setWave(this.wave);
         
         // Start the battle
         this.combatManager.startBattle(playerMonsters)
@@ -168,7 +168,7 @@ class Game {
                     if (results.rewards.waveCompleted) {
                         // Advance to next wave
                         this.wave++;
-                        this.combatManager.advanceWave();
+                        this.combatManager.setWave(this.wave);
                         this.uiManager.updateWaveDisplay(this.wave);
                         this.uiManager.showNotification(`Advanced to Wave ${this.wave}!`, 'success');
                     }
@@ -245,7 +245,7 @@ class Game {
         }
         
         // Calculate cost based on tier
-        const cost = tier * 50;
+        const cost = tier * 10;
         
         // Check if player has enough coins
         if (this.coins < cost) {
@@ -285,11 +285,53 @@ class Game {
     }
     
     /**
-     * Get list of unlocked monster tiers
-     * @returns {Array} List of unlocked monster tiers
+     * Handle monster merge event
+     * @param {number} newTier - The tier of the newly created monster
+     */
+    onMonsterMerged(newTier) {
+        // Update highest tier if needed
+        if (newTier > this.highestTier) {
+            this.highestTier = newTier;
+            
+            // Unlock the next tier if it's not already unlocked
+            if (!this.unlockedMonsters.includes(newTier + 1)) {
+                this.unlockedMonsters.push(newTier + 1);
+                this.uiManager.showNotification(`Unlocked Tier ${newTier + 1} monster!`, 'success');
+            }
+        }
+        
+        // Award coins for merging
+        const mergeBonus = newTier * 5;
+        this.coins += mergeBonus;
+        this.uiManager.updateMoneyDisplay(this.coins);
+        this.uiManager.showNotification(`Merged to Tier ${newTier}! +${mergeBonus} coins`, 'success');
+        
+        // Save game state
+        this.saveGameState();
+    }
+    
+    /**
+     * Get the current coins
+     * @returns {number} Current coin amount
+     */
+    getCoins() {
+        return this.coins;
+    }
+    
+    /**
+     * Get the current wave number
+     * @returns {number} Current wave number
+     */
+    getWave() {
+        return this.wave;
+    }
+    
+    /**
+     * Get unlocked monster tiers
+     * @returns {Array} Array of unlocked monster tiers
      */
     getUnlockedTiers() {
-        return this.unlockedMonsters;
+        return this.unlockedMonsters || [1, 2, 3];
     }
     
     /**

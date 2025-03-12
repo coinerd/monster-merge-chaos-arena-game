@@ -205,4 +205,19 @@ class GridManager {
         
         return gridState;
     }
+    
+    /**
+     * Clear all monsters from the grid
+     */
+    clearGrid() {
+        // Remove all monsters from the scene and clear the grid
+        for (let row = 0; row < this.gridSize; row++) {
+            for (let col = 0; col < this.gridSize; col++) {
+                if (this.grid[row][col]) {
+                    this.scene.remove(this.grid[row][col].mesh);
+                    this.grid[row][col] = null;
+                }
+            }
+        }
+    }
 }
