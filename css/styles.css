@@ -200,10 +200,10 @@ body {
     position: absolute;
     color: #ff4d4d;
     font-weight: bold;
-    font-size: 20px;
-    text-shadow: 1px 1px 2px #000;
+    font-size: 16px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
     pointer-events: none;
-    z-index: 25;
+    z-index: 30;
     animation: damage-float 1s ease-out forwards;
 }
 
@@ -218,62 +218,53 @@ body {
     }
 }
 
-/* Notification system */
+/* Notification styles */
 #notification-container {
     position: fixed;
     top: 20px;
     right: 20px;
-    width: 300px;
-    max-width: 80%;
     z-index: 1000;
-    pointer-events: none;
 }
 
 .notification {
-    margin-bottom: 10px;
-    padding: 15px;
-    border-radius: 5px;
+    background-color: #283655;
     color: white;
-    font-weight: bold;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    transform: translateX(0);
-    opacity: 1;
-    transition: opacity 0.3s, transform 0.3s;
+    padding: 15px 20px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    animation: slide-in 0.3s ease-out;
 }
 
-.notification.fade-out {
-    opacity: 0;
-    transform: translateX(100%);
-}
-
-.notification.error {
-    background-color: #e94560;
-}
-
-.notification.success {
-    background-color: #4ade80;
-}
-
-.notification.info {
-    background-color: #3a86ff;
+@keyframes slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* Confirmation dialog */
 #confirmation-overlay .overlay-content {
-    text-align: center;
     min-width: 300px;
-}
-
-.button-row {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 20px;
+    text-align: center;
 }
 
 #confirmation-message {
     margin: 20px 0;
-    font-size: 18px;
-    text-align: center;
+}
+
+.button-row {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+#confirm-yes, #confirm-no {
+    width: 100px;
 }
 
 #confirm-yes {
@@ -292,86 +283,29 @@ body {
     background-color: #ef5350;
 }
 
-/* Battle results styling */
-.battle-victory {
-    color: #4ade80;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.battle-defeat {
-    color: #e94560;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.battle-rewards, .battle-next-wave {
-    text-align: center;
-    margin-bottom: 10px;
-    font-size: 18px;
-}
-
-.battle-log {
-    margin-top: 20px;
-    background-color: rgba(0, 0, 0, 0.2);
-    padding: 15px;
-    border-radius: 5px;
-}
-
-.battle-log h3 {
-    margin-bottom: 10px;
-    color: #3a86ff;
-}
-
-.battle-log ul {
-    list-style-type: none;
-}
-
-.battle-log li {
-    margin-bottom: 5px;
-    font-size: 14px;
-}
-
-/* Game Over Overlay */
+/* Game over overlay */
 #game-over-overlay .overlay-content {
-    background-color: rgba(0, 0, 0, 0.9);
-    border: 3px solid #e94560;
     text-align: center;
-}
-
-#game-over-overlay h2 {
-    color: #e94560;
-    font-size: 36px;
-    margin-bottom: 20px;
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.7);
 }
 
 #game-over-message {
-    font-size: 24px;
-    margin-bottom: 30px;
-    color: #fff;
+    margin: 20px 0;
+    font-size: 18px;
 }
 
-#game-over-wave {
-    font-size: 28px;
-    margin-bottom: 30px;
-    color: #16a085;
-    font-weight: bold;
+.wave-display {
+    font-size: 24px;
+    color: #e94560;
+    margin: 20px 0;
 }
 
 #restart-game {
-    background-color: #16a085;
-    padding: 15px 30px;
-    font-size: 20px;
     margin: 0 auto;
-    display: inline-block;
+    display: block;
+    width: 200px;
+    background-color: #4caf50;
 }
 
 #restart-game:hover {
-    background-color: #1abc9c;
-    transform: scale(1.05);
+    background-color: #66bb6a;
 }
