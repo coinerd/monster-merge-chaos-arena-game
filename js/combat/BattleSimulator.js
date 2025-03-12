@@ -199,8 +199,13 @@ class BattleSimulator {
             }
         }
         
+        // Round to nearest integer
+        coins = Math.floor(coins);
+        
         return {
-            coins: Math.floor(coins)
+            coins,
+            waveCompleted: result.victory,
+            waveNumber: currentWave
         };
     }
 }
