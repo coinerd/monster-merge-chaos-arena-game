@@ -93,7 +93,7 @@ class BattleSimulator {
                 playerDamageDealt += this.simulateTeamAttack(playerTeam, enemyTeam);
                 
                 // Check if enemy team is defeated
-                if (enemyTeam.every(m => m.health <= 0)) {
+                if (enemyTeam.every(m => m.health <= 0) {
                     simulateTurn(); // Skip to end condition check
                     return;
                 }
