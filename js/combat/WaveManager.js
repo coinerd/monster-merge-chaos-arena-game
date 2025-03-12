@@ -197,4 +197,28 @@ class WaveManager {
         this.currentWave = 1;
         this.clearEnemies();
     }
+    
+    /**
+     * Get the current wave number
+     * @returns {number} Current wave number
+     */
+    getCurrentWave() {
+        return this.currentWave;
+    }
+    
+    /**
+     * Set the current wave number
+     * @param {number} wave - Wave number to set
+     */
+    setCurrentWave(wave) {
+        this.currentWave = Math.max(1, wave);
+    }
+    
+    /**
+     * Get current enemy monsters
+     * @returns {Array} Array of enemy monsters
+     */
+    getEnemyMonsters() {
+        return this.enemyMonsters;
+    }
 }
