@@ -199,22 +199,33 @@ class Game {
         });
         
         // Clear the grid of all monsters
-        this.clearAllMonsters();
+        this.gridManager.clearGrid();
+        
+        // Reset game state
+        this.coins = 100;
+        this.wave = 1;
+        this.highestTier = 1;
+        this.unlockedMonsters = [1, 2, 3];
+        
+        // Update UI
+        this.uiManager.updateMoneyDisplay(this.coins);
+        this.uiManager.updateWaveDisplay(this.wave);
+        
+        // Save the reset state
+        this.saveGameState();
     }
     
     /**
-     * Clear all monsters from the grid
+     * Remove defeated monsters from the grid
      */
-    clearAllMonsters() {
-        for (let row = 0; row < this.gridManager.gridSize; row++) {
-            for (let col = 0; col < this.gridManager.gridSize; col++) {
-                const monster = this.gridManager.grid[row][col];
-                if (monster) {
-                    // Remove monster from scene
-                    this.monsterManager.removeMonsterFromScene(monster);
-                    // Remove from grid
-                    this.gridManager.removeMonsterFromGrid(row, col);
-                    // Remove health bar
+    removeDefeatedMonsters() {
+        const monsters = this.gridManager.getMonsters();
+        
+        for (const monster of monsters) {
+            if (monster.health <= 0) {
+                const pos = this.gridManager.getMonsterGridPosition(monster);
+                if (pos.row !== null && pos.col !== null) {
+                    this.gridManager.removeMonsterFromGrid(pos.row, pos.col);
                     this.uiManager.removeMonsterHealthBar(monster.id);
                 }
             }
@@ -222,203 +233,87 @@ class Game {
     }
     
     /**
-     * Called when battle results overlay is closed
+     * Buy a new monster from the shop
+     * @param {number} tier - Tier of the monster to buy
+     * @returns {boolean} Whether the purchase was successful
      */
-    onBattleComplete() {
-        this.inBattle = false;
-        this.combatManager.clearEnemies();
-    }
-    
-    /**
-     * Remove monsters with 0 health from the grid
-     */
-    removeDefeatedMonsters() {
-        for (let row = 0; row < this.gridManager.gridSize; row++) {
-            for (let col = 0; col < this.gridManager.gridSize; col++) {
-                const monster = this.gridManager.grid[row][col];
-                
-                if (monster && monster.health <= 0) {
-                    this.monsterManager.removeMonsterFromScene(monster);
-                    this.gridManager.grid[row][col] = null;
-                }
-            }
+    buyMonster(tier) {
+        // Check if monster tier is unlocked
+        if (!this.unlockedMonsters.includes(tier)) {
+            this.uiManager.showNotification('This monster tier is not unlocked yet!', 'error');
+            return false;
         }
-    }
-    
-    /**
-     * Purchase a new monster from the shop
-     * @param {number} tier - Tier of monster to purchase
-     */
-    purchaseMonster(tier) {
-        const price = tier * 10;
         
-        if (this.coins < price) {
-            this.uiManager.showNotification('Not enough coins to purchase this monster!', 'error');
-            return;
+        // Calculate cost based on tier
+        const cost = tier * 50;
+        
+        // Check if player has enough coins
+        if (this.coins < cost) {
+            this.uiManager.showNotification('Not enough coins!', 'error');
+            return false;
+        }
+        
+        // Find an empty cell for the new monster
+        const emptyCell = this.gridManager.findEmptyCell();
+        if (!emptyCell) {
+            this.uiManager.showNotification('No empty cells on the grid!', 'error');
+            return false;
         }
         
         // Create the new monster
         const monster = this.monsterManager.createMonster(tier);
         
-        // Find an empty cell to place the monster
-        let placed = false;
-        
-        for (let row = 0; row < this.gridManager.gridSize; row++) {
-            for (let col = 0; col < this.gridManager.gridSize; col++) {
-                if (!this.gridManager.grid[row][col]) {
-                    this.gridManager.placeMonsterAt(monster, row, col);
-                    
-                    // Animate the placement
-                    this.uiManager.animateMonsterPlacement(monster);
-                    
-                    placed = true;
-                    break;
-                }
-            }
+        // Place monster on the grid
+        if (this.gridManager.placeMonsterAt(monster, emptyCell.row, emptyCell.col)) {
+            // Deduct coins
+            this.coins -= cost;
+            this.uiManager.updateMoneyDisplay(this.coins);
             
-            if (placed) break;
-        }
-        
-        if (!placed) {
-            this.uiManager.showNotification('No empty cells available!', 'error');
-            return;
-        }
-        
-        // Deduct the price
-        this.coins -= price;
-        this.uiManager.updateMoneyDisplay(this.coins);
-        
-        // Update highest tier
-        if (tier > this.highestTier) {
-            this.highestTier = tier;
-        }
-        
-        // Unlock the purchased tier if not already unlocked
-        if (!this.unlockedMonsters.includes(tier)) {
-            this.unlockedMonsters.push(tier);
-        }
-        
-        // Save the game
-        this.saveGameState();
-    }
-    
-    /**
-     * Called when a monster is merged
-     * @param {number} newTier - Tier of the resulting monster
-     */
-    onMonsterMerged(newTier) {
-        if (newTier > this.highestTier) {
-            this.highestTier = newTier;
+            // Save game state
+            this.saveGameState();
             
-            // Unlock the next tier if it's not already unlocked
-            if (!this.unlockedMonsters.includes(newTier)) {
-                this.unlockedMonsters.push(newTier);
-                this.saveGameState();
-                
-                // Reward coins for unlocking a new tier
-                const tierUnlockReward = newTier * 20;
-                this.coins += tierUnlockReward;
-                this.uiManager.updateMoneyDisplay(this.coins);
-                
-                this.uiManager.showNotification(`Congratulations! You unlocked Tier ${newTier} monsters and earned ${tierUnlockReward} coins!`, 'success');
-            }
+            // Show success notification
+            this.uiManager.showNotification(`Purchased tier ${tier} monster!`, 'success');
+            
+            // Animate the monster placement
+            this.uiManager.animateMonsterPlacement(monster);
+            
+            return true;
         }
+        
+        return false;
     }
     
     /**
-     * Get the current wave number
-     * @returns {number} Current wave number
-     */
-    getWave() {
-        return this.wave;
-    }
-    
-    /**
-     * Get the current coin amount
-     * @returns {number} Current coins
-     */
-    getCoins() {
-        return this.coins;
-    }
-    
-    /**
-     * Get the list of monster tiers that have been unlocked
-     * @returns {Array} An array of unlocked tier numbers
+     * Get list of unlocked monster tiers
+     * @returns {Array} List of unlocked monster tiers
      */
     getUnlockedTiers() {
         return this.unlockedMonsters;
     }
     
     /**
-     * Get the list of unlocked monster tiers (legacy support)
-     * @returns {Array} Array of unlocked tier numbers
+     * Restart the game
      */
-    getUnlockedMonsters() {
-        return this.unlockedMonsters;
-    }
-    
-    /**
-     * Check if a monster tier can be unlocked based on the current highest tier
-     * @param {number} tier - Tier to check
-     * @returns {boolean} True if the tier can be unlocked
-     */
-    canUnlockTier(tier) {
-        // Tiers 1-3 are always available
-        if (tier <= 3) return true;
+    restartGame() {
+        // Clear the grid
+        this.gridManager.clearGrid();
         
-        // Higher tiers are unlocked when the player has reached tier-2
-        return tier <= this.highestTier + 2;
-    }
-    
-    /**
-     * Reset the game state
-     */
-    resetGame() {
         // Reset game state
         this.coins = 100;
         this.wave = 1;
         this.highestTier = 1;
         this.unlockedMonsters = [1, 2, 3];
         
-        // Clear the grid
-        for (let row = 0; row < this.gridManager.gridSize; row++) {
-            for (let col = 0; col < this.gridManager.gridSize; col++) {
-                const monster = this.gridManager.grid[row][col];
-                if (monster) {
-                    this.monsterManager.removeMonsterFromScene(monster);
-                    this.gridManager.grid[row][col] = null;
-                }
-            }
-        }
-        
-        // Clear health bars
-        this.uiManager.clearAllHealthBars();
-        
         // Update UI
         this.uiManager.updateMoneyDisplay(this.coins);
         this.uiManager.updateWaveDisplay(this.wave);
-        
-        // Reset combat manager
-        this.combatManager.setCurrentWave(this.wave);
-        
-        // Clear any existing enemies
-        this.combatManager.clearEnemies();
-        
-        // Reset the wave manager to generate easy wave 1 enemies
-        this.combatManager.waveManager.resetWaveProgression();
         
         // Save the reset state
         this.saveGameState();
         
         // Show notification
-        this.uiManager.showNotification('Game has been reset!', 'success');
-    }
-    
-    /**
-     * Restart the game
-     */
-    restartGame() {
-        this.resetGame();
+        this.uiManager.showNotification('Game restarted!', 'info');
     }
 }
 
