@@ -1,0 +1,238 @@
+/**
+ * OverlayManager handles all game overlays like shop and battle results
+ */
+class OverlayManager {
+    constructor(gameManager) {
+        this.gameManager = gameManager;
+        
+        // Get overlay elements
+        this.elements = {
+            shopOverlay: document.getElementById('shop-overlay'),
+            battleOverlay: document.getElementById('battle-overlay'),
+            confirmationOverlay: document.getElementById('confirmation-overlay'),
+            gameOverOverlay: document.getElementById('game-over-overlay'),
+            closeShop: document.getElementById('close-shop'),
+            closeBattle: document.getElementById('close-battle'),
+            confirmYes: document.getElementById('confirm-yes'),
+            confirmNo: document.getElementById('confirm-no'),
+            restartGame: document.getElementById('restart-game'),
+            shopItems: document.getElementById('shop-items'),
+            battleResults: document.getElementById('battle-results'),
+            confirmationMessage: document.getElementById('confirmation-message'),
+            confirmationTitle: document.getElementById('confirmation-title'),
+            gameOverMessage: document.getElementById('game-over-message'),
+            gameOverWave: document.getElementById('game-over-wave')
+        };
+        
+        this.setupEventListeners();
+        
+        // Store callback for confirmation
+        this.confirmCallback = null;
+    }
+    
+    setupEventListeners() {
+        // Close shop button
+        if (this.elements.closeShop) {
+            this.elements.closeShop.addEventListener('click', () => {
+                this.closeShop();
+            });
+        }
+        
+        // Close battle button
+        if (this.elements.closeBattle) {
+            this.elements.closeBattle.addEventListener('click', () => {
+                this.closeBattleResults();
+                if (this.gameManager && typeof this.gameManager.onBattleComplete === 'function') {
+                    this.gameManager.onBattleComplete();
+                }
+            });
+        }
+        
+        // Confirmation buttons
+        if (this.elements.confirmYes) {
+            this.elements.confirmYes.addEventListener('click', () => {
+                this.closeConfirmation();
+                if (this.confirmCallback) {
+                    this.confirmCallback();
+                    this.confirmCallback = null;
+                }
+            });
+        }
+        
+        if (this.elements.confirmNo) {
+            this.elements.confirmNo.addEventListener('click', () => {
+                this.closeConfirmation();
+                this.confirmCallback = null;
+            });
+        }
+        
+        // Restart game button
+        if (this.elements.restartGame) {
+            this.elements.restartGame.addEventListener('click', () => {
+                this.closeGameOver();
+                if (this.gameManager && typeof this.gameManager.restartGame === 'function') {
+                    this.gameManager.restartGame();
+                }
+            });
+        }
+    }
+    
+    /**
+     * Open the shop overlay and populate it with available monsters
+     * @param {Array} availableMonsters - Array of available monster tiers
+     */
+    openShop(availableMonsters) {
+        if (!this.elements.shopOverlay || !this.elements.shopItems) return;
+        
+        const unlockedTiers = availableMonsters || [];
+        const coins = this.gameManager ? this.gameManager.getCoins() : 0;
+        
+        // Clear previous items
+        this.elements.shopItems.innerHTML = '';
+        
+        // Populate shop with unlocked monster tiers
+        unlockedTiers.forEach(tier => {
+            const price = tier * 10;
+            const canAfford = coins >= price;
+            
+            const shopItem = document.createElement('div');
+            shopItem.className = `shop-item ${canAfford ? '' : 'disabled'}`;
+            
+            shopItem.innerHTML = `
+                <div class="shop-item-tier">Tier ${tier} Monster</div>
+                <div class="shop-item-price">${price} coins</div>
+            `;
+            
+            if (canAfford) {
+                shopItem.addEventListener('click', () => {
+                    if (this.gameManager && typeof this.gameManager.purchaseMonster === 'function') {
+                        this.gameManager.purchaseMonster(tier);
+                    }
+                    this.closeShop();
+                });
+            }
+            
+            this.elements.shopItems.appendChild(shopItem);
+        });
+        
+        // Show shop overlay
+        this.elements.shopOverlay.classList.remove('hidden');
+    }
+    
+    /**
+     * Close the shop overlay
+     */
+    closeShop() {
+        if (this.elements.shopOverlay) {
+            this.elements.shopOverlay.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Show battle results
+     * @param {Object} results - Battle results object
+     */
+    showBattleResults(results) {
+        if (!this.elements.battleOverlay || !this.elements.battleResults) return;
+        
+        let content = '';
+        
+        if (results.victory) {
+            content += '<div class="battle-victory">Victory!</div>';
+        } else {
+            content += '<div class="battle-defeat">Defeat!</div>';
+        }
+        
+        content += `<div class="battle-rewards">Coins earned: ${results.rewards.coins}</div>`;
+        
+        if (results.rewards.waveCompleted) {
+            const nextWave = this.gameManager ? this.gameManager.getWave() + 1 : 1;
+            content += `<div class="battle-next-wave">Advancing to Wave ${nextWave}</div>`;
+        }
+        
+        // Add battle log (last 5 entries)
+        content += '<div class="battle-log"><h3>Battle Log:</h3><ul>';
+        const logEntries = results.log ? results.log.slice(-5) : [];
+        logEntries.forEach(entry => {
+            content += `<li>${entry}</li>`;
+        });
+        content += '</ul></div>';
+        
+        this.elements.battleResults.innerHTML = content;
+        this.elements.battleOverlay.classList.remove('hidden');
+    }
+    
+    /**
+     * Close the battle results overlay
+     */
+    closeBattleResults() {
+        if (this.elements.battleOverlay) {
+            this.elements.battleOverlay.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Show a confirmation dialog
+     * @param {string} title - The title for the confirmation dialog
+     * @param {string} message - The confirmation message
+     * @param {Function} onConfirm - Function to call if confirmed
+     */
+    showConfirmation(title, message, onConfirm) {
+        if (!this.elements.confirmationOverlay) return;
+        
+        // Store the callback
+        this.confirmCallback = onConfirm;
+        
+        // Set the title if the element exists
+        if (this.elements.confirmationTitle) {
+            this.elements.confirmationTitle.textContent = title;
+        }
+        
+        // Set the message
+        if (this.elements.confirmationMessage) {
+            this.elements.confirmationMessage.textContent = message;
+        }
+        
+        // Show the overlay
+        this.elements.confirmationOverlay.classList.remove('hidden');
+    }
+    
+    /**
+     * Close the confirmation overlay
+     */
+    closeConfirmation() {
+        if (this.elements.confirmationOverlay) {
+            this.elements.confirmationOverlay.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * Show game over overlay
+     * @param {Object} results - Game over results object
+     */
+    showGameOver(results) {
+        if (!this.elements.gameOverOverlay || !this.elements.gameOverMessage || !this.elements.gameOverWave) return;
+        
+        // Set the message
+        if (this.elements.gameOverMessage) {
+            this.elements.gameOverMessage.textContent = results.message;
+        }
+        
+        // Set the wave
+        if (this.elements.gameOverWave) {
+            this.elements.gameOverWave.textContent = `Wave ${results.wave}`;
+        }
+        
+        // Show the overlay
+        this.elements.gameOverOverlay.classList.remove('hidden');
+    }
+    
+    /**
+     * Close the game over overlay
+     */
+    closeGameOver() {
+        if (this.elements.gameOverOverlay) {
+            this.elements.gameOverOverlay.classList.add('hidden');
+        }
+    }
+}
