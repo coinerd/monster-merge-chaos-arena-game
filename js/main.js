@@ -151,8 +151,8 @@ class Game {
         // Make sure combat manager has the correct wave
         this.combatManager.setWave(this.wave);
         
-        // Generate new enemies for this wave
-        this.combatManager.generateEnemyWave();
+        // Generate new enemies for this wave - explicitly pass the current wave number
+        this.combatManager.generateEnemyWave(this.wave);
         
         // Start the battle
         this.combatManager.startBattle(playerMonsters)
@@ -250,41 +250,40 @@ class Game {
         // Calculate cost based on tier
         const cost = tier * 10;
         
-        // Check if player has enough coins
+        // Check if player has enough money
         if (this.coins < cost) {
             this.uiManager.showNotification('Not enough coins!', 'error');
             return false;
         }
         
-        // Find an empty cell for the new monster
+        // Find an empty cell
         const emptyCell = this.gridManager.findEmptyCell();
         if (!emptyCell) {
-            this.uiManager.showNotification('No empty cells on the grid!', 'error');
+            this.uiManager.showNotification('No empty cells available!', 'error');
             return false;
         }
         
-        // Create the new monster
+        // Create the monster and place it in the grid
         const monster = this.monsterManager.createMonster(tier);
+        this.gridManager.placeMonsterInGrid(monster, emptyCell.row, emptyCell.col);
         
-        // Place monster on the grid
-        if (this.gridManager.placeMonsterAt(monster, emptyCell.row, emptyCell.col)) {
-            // Deduct coins
-            this.coins -= cost;
-            this.uiManager.updateMoneyDisplay(this.coins);
-            
-            // Save game state
-            this.saveGameState();
-            
-            // Show success notification
-            this.uiManager.showNotification(`Purchased tier ${tier} monster!`, 'success');
-            
-            // Animate the monster placement
-            this.uiManager.animateMonsterPlacement(monster);
-            
-            return true;
-        }
+        // Deduct cost
+        this.coins -= cost;
+        this.uiManager.updateMoneyDisplay(this.coins);
         
-        return false;
+        // Save game state
+        this.saveGameState();
+        
+        return true;
+    }
+    
+    /**
+     * Alias for buyMonster to maintain compatibility with OverlayManager
+     * @param {number} tier - Tier of the monster to buy
+     * @returns {boolean} Whether the purchase was successful
+     */
+    purchaseMonster(tier) {
+        return this.buyMonster(tier);
     }
     
     /**

@@ -35,7 +35,7 @@ class CombatManager {
             
             // Generate enemy wave if needed
             if (this.enemyMonsters.length === 0) {
-                this.generateEnemyWave();
+                this.generateEnemyWave(this.currentWave);
             }
             
             // Prepare teams for battle
@@ -180,9 +180,11 @@ class CombatManager {
     
     /**
      * Generate enemies for the current wave
+     * @param {number} wave - Optional wave number to override the current wave
      */
-    generateEnemyWave() {
-        this.enemyMonsters = this.waveManager.generateEnemyWave(this.currentWave);
+    generateEnemyWave(wave) {
+        const waveNumber = wave || this.currentWave;
+        this.enemyMonsters = this.waveManager.generateEnemyWave(waveNumber);
     }
     
     /**
@@ -221,6 +223,6 @@ class CombatManager {
         // Clear any existing enemies
         this.clearEnemies();
         // Generate new enemies for the next wave
-        this.generateEnemyWave();
+        this.generateEnemyWave(this.currentWave);
     }
 }
