@@ -198,3 +198,196 @@ class BattleAnimator {
             }
         }
     }
+    
+    /**
+     * Add debug markers for battle positions
+     */
+    addDebugMarkers() {
+        // Create spheres to mark player and enemy positions
+        const markerGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+        
+        // Player position marker (blue)
+        const playerMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        this.playerMarker = new THREE.Mesh(markerGeometry, playerMarkerMaterial);
+        this.playerMarker.position.copy(this.playerBattlePosition);
+        this.scene.add(this.playerMarker);
+        
+        // Enemy position marker (red)
+        const enemyMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        this.enemyMarker = new THREE.Mesh(markerGeometry, enemyMarkerMaterial);
+        this.enemyMarker.position.copy(this.enemyBattlePosition);
+        this.scene.add(this.enemyMarker);
+    }
+    
+    /**
+     * Remove debug markers
+     */
+    removeDebugMarkers() {
+        if (this.playerMarker) {
+            this.scene.remove(this.playerMarker);
+            this.playerMarker = null;
+        }
+        
+        if (this.enemyMarker) {
+            this.scene.remove(this.enemyMarker);
+            this.enemyMarker = null;
+        }
+    }
+    
+    /**
+     * Simple attack animation function
+     * @param {Object} attacker - Attacking monster
+     * @param {Object} defender - Defending monster
+     * @param {number} damage - Amount of damage
+     * @param {Function} callback - Callback function when animation completes
+     */
+    animateAttack(attacker, defender, damage, callback) {
+        const isPlayerAttacking = attacker.isPlayer;
+        const mesh = attacker.originalMesh;
+        
+        // Store original position
+        const originalPosition = mesh.position.clone();
+        const targetPosition = defender.originalMesh.position.clone();
+        
+        // Make sure meshes are visible
+        mesh.visible = true;
+        defender.originalMesh.visible = true;
+        
+        // Make sure all child meshes are visible (for GLTF models)
+        mesh.traverse(child => {
+            if (child.isMesh) {
+                child.visible = true;
+            }
+        });
+        
+        defender.originalMesh.traverse(child => {
+            if (child.isMesh) {
+                child.visible = true;
+            }
+        });
+        
+        // Move toward target
+        const moveToTarget = () => {
+            // Calculate direction vector to target
+            const direction = new THREE.Vector3().subVectors(targetPosition, originalPosition).normalize();
+            
+            // Move part way there
+            const jumpDistance = 1.0; // How far to jump toward target
+            mesh.position.addScaledVector(direction, jumpDistance);
+            
+            // Raise the monster during attack
+            mesh.position.y += 0.5;
+            
+            // After short delay, return to original position
+            setTimeout(() => {
+                // Show damage effect on defender
+                this.showDamageEffect(defender.originalMesh, damage);
+                
+                // Update health directly (since the battle is pre-calculated)
+                // This ensures health bars update correctly during animation
+                if (defender.health > damage) {
+                    defender.health -= damage;
+                } else {
+                    defender.health = 0;
+                }
+                
+                // Show damage number if UI manager exists
+                if (this.game && this.game.uiManager) {
+                    const defenderPosition = this.getScreenPosition(defender.originalMesh);
+                    if (defenderPosition) {
+                        this.game.uiManager.showDamageNumber(defenderPosition.x, defenderPosition.y, damage);
+                    }
+                    
+                    // Update health bar if it exists
+                    this.game.uiManager.updateMonsterHealthBar(defender.id, defender.health, defender.maxHealth);
+                    
+                    // If monster is defeated
+                    if (defender.health <= 0) {
+                        // Mark monster as dead and make invisible
+                        defender.isDead = true;
+                        defender.originalMesh.visible = false;
+                        
+                        // Signal death in UI
+                        this.game.uiManager.removeMonsterHealthBar(defender.id);
+                    }
+                }
+                
+                // Return to original position
+                mesh.position.copy(originalPosition);
+                
+                // After a short delay, continue with next animation
+                setTimeout(callback, this.animationSpeed / 2);
+            }, this.animationSpeed);
+        };
+        
+        // Start the animation
+        moveToTarget();
+    }
+    
+    /**
+     * Helper method to get screen position of a mesh
+     * @param {THREE.Object3D} mesh - The mesh to get screen position for
+     * @returns {Object|null} Screen position {x, y} or null if not possible
+     */
+    getScreenPosition(mesh) {
+        if (!mesh || !this.scene || !this.scene.camera) {
+            return null;
+        }
+        
+        // Create a vector at the mesh position
+        const vector = new THREE.Vector3();
+        mesh.getWorldPosition(vector);
+        
+        // Project position to screen space
+        vector.project(this.scene.camera);
+        
+        // Convert to screen coordinates
+        const widthHalf = window.innerWidth / 2;
+        const heightHalf = window.innerHeight / 2;
+        
+        return {
+            x: (vector.x * widthHalf) + widthHalf,
+            y: -(vector.y * heightHalf) + heightHalf
+        };
+    }
+    
+    /**
+     * Show damage effect on a monster
+     * @param {THREE.Object3D} mesh - Monster mesh
+     * @param {number} damage - Amount of damage
+     */
+    showDamageEffect(mesh, damage) {
+        if (!mesh) return;
+        
+        // Flash the mesh red
+        const flashDuration = 300; // ms
+        
+        // Store original materials to restore later
+        const originalMaterials = [];
+        
+        // Create temporary red material
+        const flashMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.7
+        });
+        
+        // Apply flash material to all child meshes
+        mesh.traverse(child => {
+            if (child.isMesh) {
+                originalMaterials.push({
+                    mesh: child,
+                    material: child.material
+                });
+                child.material = flashMaterial;
+            }
+        });
+        
+        // After flash duration, restore original materials
+        setTimeout(() => {
+            originalMaterials.forEach(item => {
+                item.mesh.material = item.material;
+            });
+        }, flashDuration);
+    }
+}
