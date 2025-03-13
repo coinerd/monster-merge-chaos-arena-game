@@ -6,14 +6,20 @@
  * for specialized functionality.
  */
 class MonsterManager {
-    constructor(scene) {
+    constructor(scene, textureManager, monsterTypes) {
         this.scene = scene;
         
-        // Initialize the monster factory
-        this.monsterFactory = new MonsterFactory(scene);
+        // Store the texture manager
+        this.textureManager = textureManager || new TextureManager();
+        
+        // Store the monster types
+        this.monsterTypes = monsterTypes;
+        
+        // Initialize the monster factory with the texture manager
+        this.monsterFactory = new MonsterFactory(scene, this.textureManager);
         
         // Keep a reference to available monster types for easy access
-        this.monsterTypes = monsterTypes.types;
+        this.monsterTypes = this.monsterTypes.types;
     }
     
     /**
@@ -23,7 +29,24 @@ class MonsterManager {
      * @returns {Object} The created monster object
      */
     createMonster(tier, options = {}) {
-        const monster = this.monsterFactory.createMonster(tier, options);
+        // Create options object for the factory
+        const monsterOptions = {};
+        
+        // Only add properties that are actually provided
+        if (options.health !== undefined) monsterOptions.health = options.health;
+        if (options.maxHealth !== undefined) monsterOptions.maxHealth = options.maxHealth;
+        if (options.attack !== undefined) monsterOptions.attack = options.attack;
+        if (options.defense !== undefined) monsterOptions.defense = options.defense;
+        
+        // Create the monster using the factory
+        const monster = this.monsterFactory.createMonster(tier, monsterOptions);
+        
+        // Force an immediate texture update to ensure textures are applied
+        const typeData = this.monsterTypes[tier];
+        if (typeData) {
+            this.monsterFactory.updateMonsterTextures(monster, typeData);
+        }
+        
         return monster;
     }
     
@@ -140,6 +163,10 @@ class MonsterManager {
         // Calculate health percentage
         const healthPercent = monster.health / monster.maxHealth;
         
+        // Get monster type data
+        const typeData = this.monsterTypes[monster.tier];
+        if (!typeData) return;
+        
         // Apply visual effects based on health
         monster.mesh.traverse(child => {
             if (child.isMesh && child.material) {
@@ -149,11 +176,50 @@ class MonsterManager {
                     child.material._isCloned = true;
                 }
                 
-                // Darken the monster as health decreases
+                // Determine texture type based on monster special properties
+                let textureType = 'default';
+                if (typeData.special) {
+                    if (typeData.special.blobby) textureType = 'slime';
+                    if (typeData.special.rocky) textureType = 'rocky';
+                    if (typeData.special.ghostly) textureType = 'ghostly';
+                    if (typeData.special.wings || typeData.special.tail) textureType = 'scaly';
+                }
+                
+                // Adjust color based on health
+                let color = typeData.color;
+                if (child.material.name && child.material.name.includes('secondary')) {
+                    color = typeData.secondaryColor;
+                }
+                
+                // Convert to hex string
+                const colorHex = '#' + color.toString(16).padStart(6, '0');
+                
+                // Generate new texture based on health
                 if (healthPercent < 0.5) {
+                    // Generate damaged texture
+                    const texture = this.textureManager.generateMonsterTexture(
+                        512,
+                        colorHex,
+                        {
+                            tier: monster.tier,
+                            textureType: textureType,
+                            damaged: true,
+                            damageLevel: 1 - healthPercent, // Higher value = more damage
+                            roughness: 0.7, // Damaged monsters look rougher
+                            metalness: 0.1
+                        }
+                    );
+                    
+                    texture.needsUpdate = true;
+                    child.material.map = texture;
+                    
+                    // Darken the monster as health decreases
                     const darkenFactor = 0.5 + (healthPercent * 0.5);
                     child.material.color.multiplyScalar(darkenFactor);
                 }
+                
+                // Update material properties
+                child.material.needsUpdate = true;
             }
         });
     }

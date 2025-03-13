@@ -48,7 +48,8 @@ class MonsterTypes {
                     transparent: false
                 },
                 special: {
-                    wings: true
+                    wings: true,
+                    scaly: true
                 }
             },
             
@@ -69,6 +70,9 @@ class MonsterTypes {
                     roughness: 0.8,
                     metalness: 0.1,
                     transparent: false
+                },
+                special: {
+                    rocky: true
                 }
             },
             
@@ -92,7 +96,8 @@ class MonsterTypes {
                     opacity: 0.8
                 },
                 special: {
-                    ghostly: true
+                    ghostly: true,
+                    ethereal: true
                 }
             },
             
@@ -116,7 +121,8 @@ class MonsterTypes {
                 },
                 special: {
                     wings: true,
-                    tail: true
+                    tail: true,
+                    scaly: true
                 }
             },
             
@@ -140,7 +146,8 @@ class MonsterTypes {
                 },
                 special: {
                     horns: true,
-                    wings: true
+                    wings: true,
+                    demonic: true
                 }
             },
             
@@ -163,7 +170,8 @@ class MonsterTypes {
                     transparent: false
                 },
                 special: {
-                    multipleHeads: 5
+                    multipleHeads: 5,
+                    scaly: true
                 }
             },
             
@@ -212,7 +220,8 @@ class MonsterTypes {
                 special: {
                     wings: true,
                     tail: true,
-                    breathWeapon: "fire"
+                    breathWeapon: "fire",
+                    scaly: true
                 }
             }
         };

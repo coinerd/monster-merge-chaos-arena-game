@@ -3,12 +3,13 @@
  * This centralizes all geometry creation code in one place and uses 3D models
  */
 class MonsterGeometryFactory {
-    constructor() {
+    constructor(textureManager) {
         // Reference to the monster types
         this.monsterTypes = monsterTypes.types;
         
         // Cache for generated geometries
         this.geometryCache = {};
+        this.texturedFallbackCache = {};
         
         // GLTF Loader for loading 3D models
         this.gltfLoader = new THREE.GLTFLoader();
@@ -21,6 +22,12 @@ class MonsterGeometryFactory {
         // Keep track of which models are currently loading
         this.loadingModels = {};
         
+        // Create texture manager for monster textures
+        this.textureManager = textureManager || new TextureManager();
+        
+        // Track whether real models are loaded
+        this.modelsLoaded = false;
+        
         // Preload all monster models
         this.preloadModels();
     }
@@ -31,7 +38,7 @@ class MonsterGeometryFactory {
     preloadModels() {
         for (let tier = 1; tier <= 9; tier++) {
             const modelConfig = monsterModels.getModelForTier(tier);
-            this.loadModel(modelConfig.modelPath);
+            this.loadModel(modelConfig.modelPath, tier);
         }
     }
     
@@ -41,58 +48,72 @@ class MonsterGeometryFactory {
      * @returns {THREE.Group} The 3D geometry group for the monster
      */
     createGeometry(tier) {
-        // Use cached geometry if available
-        if (this.geometryCache[tier]) {
-            return this.geometryCache[tier].clone();
-        }
-        
         // Get the monster type data
         const monsterType = this.monsterTypes[tier];
         const modelConfig = monsterModels.getModelForTier(tier);
         
-        // If model is being loaded, use fallback geometry
-        if (this.loadingModels[modelConfig.modelPath]) {
-            const fallbackGeometry = this.createFallbackGeometry(modelConfig.fallbackGeometry, monsterType);
-            return fallbackGeometry;
+        // Check if we have the real model loaded and cached
+        if (this.geometryCache[tier]) {
+            // Return a clone of the cached real model with materials applied
+            const clonedModel = this.geometryCache[tier].clone();
+            this.applyMaterialsToModel(clonedModel, monsterType, modelConfig);
+            return clonedModel;
         }
         
-        // Try to load the model
-        this.loadingModels[modelConfig.modelPath] = true;
+        // If we don't have the real model, return a textured fallback
+        // We'll use fallbacks that always have textures applied
+        if (this.texturedFallbackCache[tier]) {
+            return this.texturedFallbackCache[tier].clone();
+        }
         
-        // Load model asynchronously
-        this.loadModel(modelConfig.modelPath, (model) => {
-            // Apply materials based on mapping
-            this.applyMaterialsToModel(model, monsterType, modelConfig);
-            
-            // Apply scaling
-            model.scale.set(modelConfig.scale, modelConfig.scale, modelConfig.scale);
-            
-            // Cache the model for future use
-            this.geometryCache[tier] = model;
-            
-            // Remove from loading models
-            delete this.loadingModels[modelConfig.modelPath];
-        });
+        // Create a new textured fallback
+        const fallbackGeometry = this.createTexturedFallbackGeometry(modelConfig.fallbackGeometry, monsterType);
         
-        // Return fallback geometry while loading
-        const fallbackGeometry = this.createFallbackGeometry(modelConfig.fallbackGeometry, monsterType);
+        // Cache it for future use
+        this.texturedFallbackCache[tier] = fallbackGeometry.clone();
+        
+        // Also try to load the real model if it's not already loading
+        if (!this.loadingModels[modelConfig.modelPath]) {
+            // Set loading flag
+            this.loadingModels[modelConfig.modelPath] = true;
+            
+            // Load model asynchronously
+            this.loadModel(modelConfig.modelPath, tier);
+        }
+        
         return fallbackGeometry;
     }
     
     /**
      * Load a 3D model from a file
      * @param {string} modelPath - Path to the model file
-     * @param {Function} callback - Function to call when model is loaded
+     * @param {number} tier - The monster tier associated with this model
      */
-    loadModel(modelPath, callback) {
+    loadModel(modelPath, tier) {
+        const monsterType = this.monsterTypes[tier];
+        const modelConfig = monsterModels.getModelForTier(tier);
+        
         this.gltfLoader.load(
             modelPath,
             (gltf) => {
                 const model = gltf.scene;
                 
-                if (callback) {
-                    callback(model);
-                }
+                // Apply materials to the model
+                this.applyMaterialsToModel(model, monsterType, modelConfig);
+                
+                // Apply scaling
+                model.scale.set(modelConfig.scale, modelConfig.scale, modelConfig.scale);
+                
+                // Cache the model for future use
+                this.geometryCache[tier] = model;
+                
+                // Remove from loading models
+                delete this.loadingModels[modelConfig.modelPath];
+                
+                // Set models loaded flag
+                this.modelsLoaded = true;
+                
+                console.log(`Loaded 3D model for tier ${tier}`);
             },
             // Progress callback
             (xhr) => {
@@ -101,7 +122,7 @@ class MonsterGeometryFactory {
             // Error callback
             (error) => {
                 console.error('Error loading monster model:', error);
-                delete this.loadingModels[modelPath];
+                delete this.loadingModels[modelConfig.modelPath];
             }
         );
     }
@@ -115,19 +136,28 @@ class MonsterGeometryFactory {
     applyMaterialsToModel(model, monsterType, modelConfig) {
         model.traverse((node) => {
             if (node.isMesh) {
+                // Store the original name for material mapping
+                if (!node.userData.originalName) {
+                    node.userData.originalName = node.name;
+                }
+                
                 // Find matching material mapping
                 for (const mapping of modelConfig.materialMappings) {
-                    if (node.name.includes(mapping.meshName)) {
+                    if (node.userData.originalName.includes(mapping.meshName) || 
+                        node.name.includes(mapping.meshName)) {
                         // Apply the appropriate material
                         switch (mapping.materialType) {
                             case 'primary':
                                 node.material = this.createMaterial(monsterType, false, mapping);
+                                node.material.name = 'primary';
                                 break;
                             case 'secondary':
                                 node.material = this.createMaterial(monsterType, true, mapping);
+                                node.material.name = 'secondary';
                                 break;
                             case 'eye':
                                 node.material = this.createEyeMaterial(monsterType);
+                                node.material.name = 'eye';
                                 break;
                         }
                         break;
@@ -148,13 +178,44 @@ class MonsterGeometryFactory {
         const color = useSecondary ? monsterType.secondaryColor : monsterType.color;
         const props = monsterType.materialProperties || {};
         
-        return new THREE.MeshStandardMaterial({
+        // Convert color to hex string format for TextureManager
+        const colorHex = '#' + color.toString(16).padStart(6, '0');
+        
+        // Determine texture type based on monster special properties
+        let textureType = 'default';
+        if (monsterType.special) {
+            if (monsterType.special.blobby) textureType = 'slime';
+            if (monsterType.special.rocky) textureType = 'rocky';
+            if (monsterType.special.ghostly) textureType = 'ghostly';
+            if (monsterType.special.wings || monsterType.special.tail) textureType = 'scaly';
+        }
+        
+        // Generate texture for the monster
+        const texture = this.textureManager.generateMonsterTexture(
+            512,
+            colorHex,
+            {
+                tier: monsterType.tier,
+                textureType: textureType,
+                roughness: props.roughness || 0.5,
+                metalness: props.metalness || 0.2
+            }
+        );
+        
+        // Ensure texture is properly configured
+        texture.needsUpdate = true;
+        
+        // Create material with the texture
+        const material = new THREE.MeshStandardMaterial({
+            map: texture,
             color: color,
             roughness: props.roughness || 0.5,
             metalness: props.metalness || 0.2,
             transparent: options.transparent || props.transparent || false,
             opacity: options.opacity || props.opacity || 1.0
         });
+        
+        return material;
     }
     
     /**
@@ -173,12 +234,12 @@ class MonsterGeometryFactory {
     }
     
     /**
-     * Create a simple fallback geometry to use while model is loading
+     * Create a textured fallback geometry to use while model is loading
      * @param {string} type - Type of geometry to create
      * @param {Object} monsterType - Monster type data
-     * @returns {THREE.Group} The fallback geometry
+     * @returns {THREE.Group} The fallback geometry with textures applied
      */
-    createFallbackGeometry(type, monsterType) {
+    createTexturedFallbackGeometry(type, monsterType) {
         const group = new THREE.Group();
         const material = this.createMaterial(monsterType);
         let mesh;
@@ -186,19 +247,25 @@ class MonsterGeometryFactory {
         switch (type) {
             case 'sphere':
                 mesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5, 12, 12),
+                    new THREE.SphereGeometry(0.5, 16, 16),
                     material
                 );
                 break;
             case 'cylinder':
                 mesh = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.3, 0.5, 0.8, 12),
+                    new THREE.CylinderGeometry(0.3, 0.5, 0.8, 16),
                     material
                 );
                 break;
             case 'box':
                 mesh = new THREE.Mesh(
                     new THREE.BoxGeometry(0.7, 0.7, 0.7),
+                    material
+                );
+                break;
+            case 'cone':
+                mesh = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.5, 1.0, 16),
                     material
                 );
                 break;
@@ -209,10 +276,36 @@ class MonsterGeometryFactory {
                 );
         }
         
+        // Add eyes to make it look more monster-like
+        const eyeSize = 0.1;
+        const eyeMaterial = this.createEyeMaterial(monsterType);
+        
+        const leftEye = new THREE.Mesh(
+            new THREE.SphereGeometry(eyeSize, 8, 8),
+            eyeMaterial
+        );
+        leftEye.position.set(0.2, 0.2, 0.4);
+        
+        const rightEye = new THREE.Mesh(
+            new THREE.SphereGeometry(eyeSize, 8, 8),
+            eyeMaterial
+        );
+        rightEye.position.set(-0.2, 0.2, 0.4);
+        
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        
         group.add(mesh);
+        group.add(leftEye);
+        group.add(rightEye);
         
         return group;
+    }
+    
+    /**
+     * Create a simple fallback geometry (deprecated, use createTexturedFallbackGeometry instead)
+     */
+    createFallbackGeometry(type, monsterType) {
+        return this.createTexturedFallbackGeometry(type, monsterType);
     }
 }

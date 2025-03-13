@@ -20,6 +20,9 @@ class DragDropManager {
         // Listeners for drag state changes
         this.stateChangeListeners = [];
         
+        // Default Y position for monsters on the grid (slightly above the grid surface)
+        this.defaultMonsterY = 0.5;
+        
         this.setupEventListeners();
     }
     
@@ -106,7 +109,7 @@ class DragDropManager {
                     this.gridManager.removeMonsterFromGrid(row, col);
                     
                     // Raise the monster slightly while dragging
-                    monsterObj.mesh.position.y += 0.5;
+                    monsterObj.mesh.position.y = this.defaultMonsterY + 0.5;
                     
                     // Highlight valid cells
                     this.gridManager.highlightValidDropCells(monsterObj);
@@ -176,7 +179,7 @@ class DragDropManager {
         }
         
         // Reset dragging state
-        this.draggedMonster.mesh.position.y -= 0.5; // Match the same amount we raised it
+        this.draggedMonster.mesh.position.y = this.defaultMonsterY; // Set to default Y position
         this.isDragging = false;
         this.draggedMonster = null;
         this.originalPosition = null;

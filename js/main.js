@@ -21,11 +21,14 @@ class Game {
         this.storageManager = new StorageManager();
         this.gameState = this.storageManager.loadGame();
         
+        // Initialize the texture manager for all game textures
+        this.textureManager = new TextureManager();
+        
         // Initialize the scene manager
         this.sceneManager = new SceneManager(this.container);
         
-        // Initialize the monster manager with the new module
-        this.monsterManager = new MonsterManager(this.sceneManager.scene);
+        // Initialize the monster manager with the new module and texture manager
+        this.monsterManager = new MonsterManager(this.sceneManager.scene, this.textureManager, monsterTypes);
         
         // Initialize the grid manager
         this.gridManager = new GridManager(this.sceneManager, this.monsterManager);
@@ -34,8 +37,8 @@ class Game {
         this.combatManager = new CombatManager(this.sceneManager.scene, this.monsterManager);
         this.combatManager.setWave(this.gameState.wave);
         
-        // Initialize the UI manager with the scene manager and this game instance
-        this.uiManager = new UIManager(this.sceneManager, this);
+        // Initialize the UI manager with the scene manager, this game instance, and the texture manager
+        this.uiManager = new UIManager(this.sceneManager, this, this.textureManager);
         
         // Load the game state
         this.loadGameState();

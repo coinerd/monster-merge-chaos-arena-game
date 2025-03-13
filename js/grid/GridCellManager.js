@@ -9,8 +9,16 @@ class GridCellManager {
         this.gridOffset = (gridSize * cellSize) / 2 - cellSize / 2;
         
         this.cells = [];
+        
+        // Create texture manager and generate textures
+        this.textureManager = new TextureManager();
+        const gridTexture = this.textureManager.generateGridTexture();
+        const highlightTexture = this.textureManager.generateHighlightTexture();
+        
+        // Create materials with textures
         this.cellMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x283655,
+            map: gridTexture,
+            color: 0xffffff, // Use white to let the texture colors show
             roughness: 0.8,
             metalness: 0.2,
             transparent: true,
@@ -18,7 +26,8 @@ class GridCellManager {
         });
         
         this.highlightMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x4ade80, 
+            map: highlightTexture,
+            color: 0xffffff, // Use white to let the texture colors show
             roughness: 0.8,
             metalness: 0.2,
             transparent: true,
@@ -124,5 +133,10 @@ class GridCellManager {
             if (cell.material) cell.material.dispose();
         });
         this.cells = [];
+        
+        // Dispose textures
+        if (this.textureManager) {
+            this.textureManager.dispose();
+        }
     }
 }

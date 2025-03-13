@@ -20,6 +20,9 @@ class GridManager {
         this.cellManager = new GridCellManager(this.scene, this.gridSize, this.cellSize);
         this.mergeManager = new MergeManager(this.scene, this.monsterManager, this.cellManager);
         this.dragDropManager = new DragDropManager(this.sceneManager, this);
+        
+        // Default Y position for monsters on the grid (slightly above the grid surface)
+        this.defaultMonsterY = 0.5;
     }
     
     // Methods for grid cell handling
@@ -49,8 +52,8 @@ class GridManager {
         // Get the exact world position for this cell
         const position = this.cellManager.getWorldPosition(row, col);
         
-        // Position the monster precisely at the cell center
-        monster.mesh.position.set(position.x, position.y, position.z);
+        // Position the monster precisely at the cell center with consistent Y position
+        monster.mesh.position.set(position.x, this.defaultMonsterY, position.z);
         
         // Update the grid data structure
         this.grid[row][col] = monster;

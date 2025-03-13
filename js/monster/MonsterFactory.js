@@ -5,12 +5,15 @@
  * modifying, and querying monsters for the game.
  */
 class MonsterFactory {
-    constructor(scene) {
+    constructor(scene, textureManager) {
         this.scene = scene;
         this.nextMonsterId = 1;
         
-        // Initialize the geometry factory
-        this.geometryFactory = new MonsterGeometryFactory();
+        // Store the texture manager
+        this.textureManager = textureManager || new TextureManager();
+        
+        // Initialize the geometry factory with the texture manager
+        this.geometryFactory = new MonsterGeometryFactory(this.textureManager);
         
         // Cache for fast access
         this.monsterTypes = monsterTypes.types;
@@ -79,10 +82,78 @@ class MonsterFactory {
             if (child.isMesh) {
                 child.userData.isMonster = true;
                 child.userData.monsterObj = monster;
+                
+                // Ensure all materials have needsUpdate set to true
+                if (child.material) {
+                    child.material.needsUpdate = true;
+                    
+                    // If the material has a map (texture), ensure it's updated too
+                    if (child.material.map) {
+                        child.material.map.needsUpdate = true;
+                    }
+                }
             }
         });
         
+        // Force an immediate texture update for the monster
+        this.updateMonsterTextures(monster, typeData);
+        
         return monster;
+    }
+    
+    /**
+     * Update textures for a monster based on its type data
+     * @param {Object} monster - The monster to update textures for
+     * @param {Object} typeData - The monster type data
+     */
+    updateMonsterTextures(monster, typeData) {
+        if (!monster || !monster.mesh) return;
+        
+        // Determine texture type based on monster special properties
+        let textureType = 'default';
+        if (typeData.special) {
+            if (typeData.special.blobby) textureType = 'slime';
+            if (typeData.special.rocky) textureType = 'rocky';
+            if (typeData.special.ghostly) textureType = 'ghostly';
+            if (typeData.special.wings || typeData.special.tail) textureType = 'scaly';
+        }
+        
+        // Apply textures to all mesh parts
+        monster.mesh.traverse(child => {
+            if (child.isMesh && child.material) {
+                // Clone material if not already cloned to avoid affecting other instances
+                if (!child.material._isCloned) {
+                    child.material = child.material.clone();
+                    child.material._isCloned = true;
+                }
+                
+                // Determine which color to use based on material name
+                let color = typeData.color;
+                if (child.material.name && child.material.name.includes('secondary')) {
+                    color = typeData.secondaryColor;
+                }
+                
+                // Convert to hex string
+                const colorHex = '#' + color.toString(16).padStart(6, '0');
+                
+                // Generate texture for the monster part
+                const texture = this.textureManager.generateMonsterTexture(
+                    512,
+                    colorHex,
+                    {
+                        tier: monster.tier,
+                        textureType: textureType,
+                        roughness: 0.5,
+                        metalness: 0.2
+                    }
+                );
+                
+                // Apply the texture
+                texture.needsUpdate = true;
+                child.material.map = texture;
+                child.material.needsUpdate = true;
+            }
+        });
     }
     
     /**
@@ -185,12 +256,17 @@ class MonsterFactory {
         const typeData = this.monsterTypes[newTier];
         
         // Create the merged monster with boosted stats
-        return this.createMonster(newTier, {
+        const mergedMonster = this.createMonster(newTier, {
             attack: typeData.baseAttack + attackBonus,
             defense: typeData.baseDefense + defenseBonus,
             health: typeData.baseHealth + healthBonus,
             maxHealth: typeData.baseHealth + healthBonus
         });
+        
+        // Force an immediate texture update for the merged monster
+        this.updateMonsterTextures(mergedMonster, typeData);
+        
+        return mergedMonster;
     }
     
     /**

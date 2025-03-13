@@ -2,9 +2,10 @@
  * UIManager handles all UI elements and interactions
  */
 class UIManager {
-    constructor(sceneManager, gameManager) {
+    constructor(sceneManager, gameManager, textureManager) {
         this.sceneManager = sceneManager;
         this.gameManager = gameManager;
+        this.textureManager = textureManager;
         this.camera = sceneManager.camera;
         this.renderer = sceneManager.renderer;
         
@@ -20,6 +21,7 @@ class UIManager {
         this.healthBarManager = new HealthBarManager();
         
         this.setupEventListeners();
+        this.applyButtonTextures();
     }
     
     setupEventListeners() {
@@ -39,6 +41,59 @@ class UIManager {
                     this.gameManager.restartGame();
                 }
             );
+        });
+    }
+    
+    applyButtonTextures() {
+        // Get all buttons
+        const buttons = document.querySelectorAll('.game-button');
+        
+        // Apply textures to each button
+        buttons.forEach(button => {
+            // Get button dimensions
+            const rect = button.getBoundingClientRect();
+            const width = Math.max(rect.width, 200); // Minimum width of 200px
+            const height = Math.max(rect.height, 60); // Minimum height of 60px
+            
+            // Determine button color based on its function
+            let baseColor = '#e94560'; // Default color
+            
+            if (button.id === 'shop-button') {
+                baseColor = '#4ade80'; // Green for shop
+            } else if (button.id === 'battle-button') {
+                baseColor = '#f97316'; // Orange for combat
+            } else if (button.id === 'restart-button') {
+                baseColor = '#ef4444'; // Red for restart
+            }
+            
+            // Generate button textures
+            const normalTexture = this.textureManager.generateButtonTexture(width, height, baseColor, { state: 'normal' });
+            const hoverTexture = this.textureManager.generateButtonTexture(width, height, baseColor, { state: 'hover' });
+            const activeTexture = this.textureManager.generateButtonTexture(width, height, baseColor, { state: 'active' });
+            
+            // Apply textures using CSS background-image
+            button.style.backgroundImage = `url(${normalTexture.toDataURL()})`;
+            button.style.backgroundSize = 'cover';
+            button.style.color = '#ffffff';
+            button.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
+            button.style.border = 'none';
+            
+            // Add hover and active state listeners
+            button.addEventListener('mouseenter', () => {
+                button.style.backgroundImage = `url(${hoverTexture.toDataURL()})`;
+            });
+            
+            button.addEventListener('mouseleave', () => {
+                button.style.backgroundImage = `url(${normalTexture.toDataURL()})`;
+            });
+            
+            button.addEventListener('mousedown', () => {
+                button.style.backgroundImage = `url(${activeTexture.toDataURL()})`;
+            });
+            
+            button.addEventListener('mouseup', () => {
+                button.style.backgroundImage = `url(${hoverTexture.toDataURL()})`;
+            });
         });
     }
     

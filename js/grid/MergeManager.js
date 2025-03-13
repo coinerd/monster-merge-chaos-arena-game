@@ -6,6 +6,9 @@ class MergeManager {
         this.scene = scene;
         this.monsterManager = monsterManager;
         this.gridCellManager = gridCellManager;
+        
+        // Default Y position for monsters on the grid (slightly above the grid surface)
+        this.defaultMonsterY = 0.5;
     }
     
     canMergeMonsters(monster1, monster2) {
@@ -20,11 +23,29 @@ class MergeManager {
         
         // Create a new monster of the next tier
         const newTier = monster1.tier + 1;
-        const newMonster = this.monsterManager.createMonster(newTier);
+        
+        // Calculate bonus stats based on the parents
+        const attackBonus = Math.floor((monster1.attack + monster2.attack) * 0.1);
+        const defenseBonus = Math.floor((monster1.defense + monster2.defense) * 0.1);
+        const healthBonus = Math.floor((monster1.maxHealth + monster2.maxHealth) * 0.1);
+        
+        // Create the merged monster with boosted stats
+        const newMonster = this.monsterManager.createMonster(newTier, {
+            attack: monster1.attack + attackBonus,
+            defense: monster1.defense + defenseBonus,
+            health: monster1.maxHealth + healthBonus,
+            maxHealth: monster1.maxHealth + healthBonus
+        });
         
         // Calculate position for the new monster
         const position = this.gridCellManager.getWorldPosition(row, col);
-        newMonster.mesh.position.set(position.x, position.y, position.z);
+        
+        // Position the monster with consistent Y height
+        newMonster.mesh.position.set(position.x, this.defaultMonsterY, position.z);
+        
+        // No need to manually set textures here as the MonsterFactory.createMonster
+        // method now handles texture application properly
+        
         this.scene.add(newMonster.mesh);
         
         // Animation and effects for merging
@@ -49,7 +70,7 @@ class MergeManager {
         
         for (let i = 0; i < particleCount; i++) {
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-            particle.position.set(position.x, position.y, position.z);
+            particle.position.set(position.x, this.defaultMonsterY, position.z);
             particles.add(particle);
             
             // Random direction
