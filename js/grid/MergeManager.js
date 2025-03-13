@@ -2,10 +2,11 @@
  * MergeManager handles merging of monsters and related effects
  */
 class MergeManager {
-    constructor(scene, monsterManager, gridCellManager) {
+    constructor(scene, monsterManager, gridCellManager, gameManager) {
         this.scene = scene;
         this.monsterManager = monsterManager;
         this.gridCellManager = gridCellManager;
+        this.gameManager = gameManager;
         
         // Default Y position for monsters on the grid (slightly above the grid surface)
         this.defaultMonsterY = 0.5;
@@ -51,9 +52,42 @@ class MergeManager {
         // Animation and effects for merging
         this.playMergeEffect(row, col);
         
-        // Trigger any game events related to merging
-        if (typeof window.game !== 'undefined') {
+        // Notify the game about the merge
+        if (window.game && typeof window.game.onMonsterMerged === 'function') {
             window.game.onMonsterMerged(newTier);
+        }
+        
+        // Update highest tier if needed and unlock new monster tier
+        if (this.gameManager && newTier > this.gameManager.highestTier) {
+            this.gameManager.highestTier = newTier;
+            
+            // Unlock the new tier in the game
+            if (!this.gameManager.unlockedMonsters.includes(newTier)) {
+                this.gameManager.unlockedMonsters.push(newTier);
+                
+                // Update shop items to include the new tier
+                this.gameManager.shopItems = this.gameManager.storageManager.generateShopItems(
+                    this.gameManager.unlockedMonsters
+                );
+                
+                // Refresh shop if it's open
+                if (this.gameManager.uiManager && this.gameManager.uiManager.overlayManager) {
+                    const shopOverlay = document.getElementById('shop-overlay');
+                    if (shopOverlay && !shopOverlay.classList.contains('hidden')) {
+                        this.gameManager.uiManager.openShop();
+                    }
+                }
+                
+                // Show notification about new monster tier
+                if (this.gameManager.uiManager) {
+                    this.gameManager.uiManager.showNotification(`Unlocked Tier ${newTier} Monster!`, 'success');
+                }
+            }
+            
+            // Save game state
+            if (typeof this.gameManager.saveGameState === 'function') {
+                this.gameManager.saveGameState();
+            }
         }
         
         return newMonster;
@@ -64,25 +98,31 @@ class MergeManager {
         
         // Create a particle effect
         const particles = new THREE.Group();
-        const particleCount = 20;
-        const particleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
         
+        // Number of particles
+        const particleCount = 20;
+        
+        // Create particles
         for (let i = 0; i < particleCount; i++) {
-            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-            particle.position.set(position.x, this.defaultMonsterY, position.z);
+            const particle = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xffff00 })
+            );
+            
+            // Random position around the merge point
+            particle.position.set(
+                position.x + (Math.random() - 0.5) * 0.5,
+                position.y + Math.random() * 0.5,
+                position.z + (Math.random() - 0.5) * 0.5
+            );
+            
             particles.add(particle);
             
-            // Random direction
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 0.05 + Math.random() * 0.1;
-            particle.userData = {
-                velocity: new THREE.Vector3(
-                    Math.cos(angle) * speed,
-                    0.1 + Math.random() * 0.2,
-                    Math.sin(angle) * speed
-                ),
-                life: 30 + Math.floor(Math.random() * 30)
+            // Add velocity to each particle
+            particle.velocity = {
+                x: (Math.random() - 0.5) * 0.05,
+                y: Math.random() * 0.05,
+                z: (Math.random() - 0.5) * 0.05
             };
         }
         
@@ -93,14 +133,16 @@ class MergeManager {
             let allDead = true;
             
             particles.children.forEach(particle => {
-                if (particle.userData.life > 0) {
-                    particle.position.add(particle.userData.velocity);
-                    particle.userData.velocity.y -= 0.005; // Gravity
-                    particle.userData.life--;
-                    allDead = false;
-                } else {
-                    particle.visible = false;
-                }
+                // Move particle
+                particle.position.x += particle.velocity.x;
+                particle.position.y += particle.velocity.y;
+                particle.position.z += particle.velocity.z;
+                
+                // Shrink particle
+                particle.scale.multiplyScalar(0.95);
+                
+                // Check if particle is still alive
+                if (particle.scale.x > 0.01) allDead = false;
             });
             
             if (!allDead) {

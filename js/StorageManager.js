@@ -9,9 +9,29 @@ class StorageManager {
             coins: 100,
             wave: 1,
             highestTier: 1,
-            unlockedMonsters: [1], // Start with tier 1 unlocked
-            shopItems: []
+            unlockedMonsters: [1, 2, 3, 4, 5], // Start with tiers 1-5 unlocked for testing
+            shopItems: [] // Will be generated in loadGame
         };
+    }
+
+    /**
+     * Generate shop items based on unlocked tiers
+     * @param {Array} unlockedTiers - Array of unlocked monster tiers
+     * @returns {Array} Array of shop items
+     */
+    generateShopItems(unlockedTiers) {
+        if (!unlockedTiers || !Array.isArray(unlockedTiers) || unlockedTiers.length === 0) {
+            unlockedTiers = [1]; // Default to tier 1 if no tiers are provided
+        }
+        
+        // Ensure we're only using valid, unique tiers
+        const validTiers = [...new Set(unlockedTiers)].filter(tier => tier >= 1 && tier <= 10);
+        
+        // Create one shop item for each unlocked tier
+        return validTiers.map(tier => ({
+            tier: tier,
+            cost: tier * 10 // Cost based on tier
+        }));
     }
 
     /**
@@ -47,10 +67,23 @@ class StorageManager {
         const savedState = localStorage.getItem(this.storageKey);
         
         if (!savedState) {
-            return this.defaultState;
+            const defaultState = { ...this.defaultState };
+            // Generate shop items for the default state
+            defaultState.shopItems = this.generateShopItems(defaultState.unlockedMonsters);
+            return defaultState;
         }
         
-        return JSON.parse(savedState);
+        const parsedState = JSON.parse(savedState);
+        
+        // Ensure unlockedMonsters exists and is an array
+        if (!parsedState.unlockedMonsters || !Array.isArray(parsedState.unlockedMonsters)) {
+            parsedState.unlockedMonsters = [1, 2, 3, 4, 5]; // Default tiers for testing
+        }
+        
+        // Always regenerate shop items based on current unlocked monsters
+        parsedState.shopItems = this.generateShopItems(parsedState.unlockedMonsters);
+        
+        return parsedState;
     }
 
     /**

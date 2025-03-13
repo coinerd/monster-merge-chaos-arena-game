@@ -16,15 +16,50 @@ class UIManager {
         this.battleButton = document.getElementById('battle-button');
         this.restartButton = document.getElementById('restart-button');
         
-        // UI managers
-        this.overlayManager = new OverlayManager(gameManager);
-        this.healthBarManager = new HealthBarManager();
+        // Initialize UI
+        this.initialize();
         
-        this.setupEventListeners();
         this.applyButtonTextures();
     }
     
-    setupEventListeners() {
+    /**
+     * Initialize the UI
+     */
+    initialize() {
+        // Initialize overlay manager
+        const overlayElements = {
+            shopOverlay: document.getElementById('shop-overlay'),
+            battleResultsOverlay: document.getElementById('battle-overlay'),
+            confirmationOverlay: document.getElementById('confirmation-overlay'),
+            gameOverOverlay: document.getElementById('game-over-overlay'),
+            shopCloseButton: document.getElementById('close-shop'),
+            battleResultsCloseButton: document.getElementById('close-battle'),
+            confirmYes: document.getElementById('confirm-yes'),
+            confirmNo: document.getElementById('confirm-no'),
+            restartGame: document.getElementById('restart-game'),
+            shopItems: document.getElementById('shop-items'),
+            battleResults: document.getElementById('battle-results'),
+            battleResultsTitle: document.getElementById('battle-results-title'),
+            battleResultsCoins: document.getElementById('battle-results-coins'),
+            confirmationMessage: document.getElementById('confirmation-message'),
+            confirmationTitle: document.getElementById('confirmation-title'),
+            gameOverMessage: document.getElementById('game-over-message'),
+            gameOverWave: document.getElementById('game-over-wave')
+        };
+
+        this.overlayManager = new OverlayManager(overlayElements, this.gameManager);
+        
+        // Initialize health bar manager
+        this.healthBarManager = new HealthBarManager();
+        
+        // Initialize button event listeners
+        this.setupButtonEventListeners();
+    }
+    
+    /**
+     * Set up button event listeners
+     */
+    setupButtonEventListeners() {
         this.shopButton.addEventListener('click', () => {
             this.openShop();
         });
@@ -101,10 +136,10 @@ class UIManager {
      * Open the shop overlay
      */
     openShop() {
-        if (this.overlayManager) {
-            // Get available monsters from the game manager
-            const availableMonsters = this.gameManager.getUnlockedTiers();
-            this.overlayManager.openShop(availableMonsters);
+        if (this.gameManager && this.overlayManager) {
+            const shopItems = this.gameManager.getShopItems();
+            const coins = this.gameManager.getCoins();
+            this.overlayManager.openShop(shopItems, coins);
         }
     }
     

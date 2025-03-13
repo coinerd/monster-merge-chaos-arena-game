@@ -37,6 +37,9 @@ class Game {
         this.combatManager = new CombatManager(this.sceneManager.scene, this.monsterManager);
         this.combatManager.setWave(this.gameState.wave);
         
+        // Initialize the merge manager
+        this.mergeManager = new MergeManager(this.sceneManager.scene, this.monsterManager, this.gridManager, this);
+        
         // Initialize the UI manager with the scene manager, this game instance, and the texture manager
         this.uiManager = new UIManager(this.sceneManager, this, this.textureManager);
         
@@ -101,7 +104,8 @@ class Game {
             this.coins = this.gameState.coins || 100;
             this.wave = this.gameState.wave || 1;
             this.highestTier = this.gameState.highestTier || 1;
-            this.unlockedMonsters = this.gameState.unlockedMonsters || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+            this.unlockedMonsters = this.gameState.unlockedMonsters || [1];
+            this.shopItems = this.gameState.shopItems || [];
             
             // Update combat manager with current wave
             this.combatManager.setWave(this.wave);
@@ -110,7 +114,8 @@ class Game {
             this.coins = 100;
             this.wave = 1;
             this.highestTier = 1;
-            this.unlockedMonsters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+            this.unlockedMonsters = [1];
+            this.shopItems = this.storageManager.generateShopItems(this.unlockedMonsters);
         }
     }
     
@@ -123,10 +128,140 @@ class Game {
             coins: this.coins,
             wave: this.wave,
             highestTier: this.highestTier,
-            unlockedMonsters: this.unlockedMonsters
+            unlockedMonsters: this.unlockedMonsters,
+            shopItems: this.shopItems
         };
         
         this.storageManager.saveGame(this.gameState);
+    }
+    
+    /**
+     * Refresh the shop with new items
+     */
+    refreshShopItems() {
+        // Create a shop item for each unlocked tier
+        this.shopItems = this.storageManager.generateShopItems(this.unlockedMonsters);
+        
+        // Save the updated shop items
+        this.saveGameState();
+        
+        return this.shopItems;
+    }
+    
+    /**
+     * Get the current shop items
+     * @returns {Array} Array of shop items
+     */
+    getShopItems() {
+        // If no shop items exist, generate new ones
+        if (!this.shopItems || this.shopItems.length === 0) {
+            return this.refreshShopItems();
+        }
+        
+        return this.shopItems;
+    }
+    
+    /**
+     * Buy a monster from the shop
+     * @param {number} tier - Tier of the monster to buy
+     * @returns {boolean} Whether the purchase was successful
+     */
+    buyMonster(tier) {
+        // Check if the tier is valid
+        if (!tier || tier < 1 || tier > 10) {
+            this.uiManager.showNotification('Invalid monster tier!', 'error');
+            return false;
+        }
+        
+        // Calculate cost based on tier
+        const cost = tier * 10;
+        
+        // Check if player has enough money
+        if (this.coins < cost) {
+            this.uiManager.showNotification('Not enough coins!', 'error');
+            return false;
+        }
+        
+        // Find an empty cell
+        const emptyCell = this.gridManager.findEmptyCell();
+        if (!emptyCell) {
+            this.uiManager.showNotification('No empty cells available!', 'error');
+            return false;
+        }
+        
+        // Create the monster and place it in the grid
+        const monster = this.monsterManager.createMonster(tier);
+        this.gridManager.placeMonsterAt(monster, emptyCell.row, emptyCell.col);
+        
+        // Deduct cost
+        this.coins -= cost;
+        this.uiManager.updateMoneyDisplay(this.coins);
+        
+        // Update highest tier if needed
+        if (tier > this.highestTier) {
+            this.highestTier = tier;
+        }
+        
+        // Ensure this tier is unlocked
+        if (!this.unlockedMonsters.includes(tier)) {
+            this.unlockedMonsters.push(tier);
+        }
+        
+        // Save game state
+        this.saveGameState();
+        
+        return true;
+    }
+    
+    /**
+     * Buy a monster from the shop
+     * @param {number} shopItemIndex - Index of the shop item to buy
+     * @returns {boolean} Whether the purchase was successful
+     */
+    buyShopItem(shopItemIndex) {
+        // Check if the shop item exists
+        if (!this.shopItems || shopItemIndex >= this.shopItems.length) {
+            this.uiManager.showNotification('Invalid shop item!', 'error');
+            return false;
+        }
+        
+        const shopItem = this.shopItems[shopItemIndex];
+        const tier = shopItem.tier;
+        const cost = shopItem.cost;
+        
+        // Check if player has enough money
+        if (this.coins < cost) {
+            this.uiManager.showNotification('Not enough coins!', 'error');
+            return false;
+        }
+        
+        // Find an empty cell
+        const emptyCell = this.gridManager.findEmptyCell();
+        if (!emptyCell) {
+            this.uiManager.showNotification('No empty cells available!', 'error');
+            return false;
+        }
+        
+        // Create the monster and place it in the grid
+        const monster = this.monsterManager.createMonster(tier);
+        this.gridManager.placeMonsterAt(monster, emptyCell.row, emptyCell.col);
+        
+        // Deduct cost
+        this.coins -= cost;
+        this.uiManager.updateMoneyDisplay(this.coins);
+        
+        // Remove the item from the shop
+        this.shopItems.splice(shopItemIndex, 1);
+        
+        // If shop is empty, refresh it
+        if (this.shopItems.length === 0) {
+            this.refreshShopItems();
+        }
+        
+        // Save game state
+        this.saveGameState();
+        
+        return true;
     }
     
     /**
@@ -211,7 +346,8 @@ class Game {
         this.coins = 100;
         this.wave = 1;
         this.highestTier = 1;
-        this.unlockedMonsters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        this.unlockedMonsters = [1];
+        this.shopItems = this.storageManager.generateShopItems(this.unlockedMonsters);
         
         // Update UI
         this.uiManager.updateMoneyDisplay(this.coins);
@@ -239,48 +375,6 @@ class Game {
     }
     
     /**
-     * Buy a new monster from the shop
-     * @param {number} tier - Tier of the monster to buy
-     * @returns {boolean} Whether the purchase was successful
-     */
-    buyMonster(tier) {
-        // Check if monster tier is unlocked
-        if (!this.unlockedMonsters.includes(tier)) {
-            this.uiManager.showNotification('This monster tier is not unlocked yet!', 'error');
-            return false;
-        }
-        
-        // Calculate cost based on tier
-        const cost = tier * 10;
-        
-        // Check if player has enough money
-        if (this.coins < cost) {
-            this.uiManager.showNotification('Not enough coins!', 'error');
-            return false;
-        }
-        
-        // Find an empty cell
-        const emptyCell = this.gridManager.findEmptyCell();
-        if (!emptyCell) {
-            this.uiManager.showNotification('No empty cells available!', 'error');
-            return false;
-        }
-        
-        // Create the monster and place it in the grid
-        const monster = this.monsterManager.createMonster(tier);
-        this.gridManager.placeMonsterAt(monster, emptyCell.row, emptyCell.col);
-        
-        // Deduct cost
-        this.coins -= cost;
-        this.uiManager.updateMoneyDisplay(this.coins);
-        
-        // Save game state
-        this.saveGameState();
-        
-        return true;
-    }
-    
-    /**
      * Alias for buyMonster to maintain compatibility with OverlayManager
      * @param {number} tier - Tier of the monster to buy
      * @returns {boolean} Whether the purchase was successful
@@ -294,22 +388,32 @@ class Game {
      * @param {number} newTier - The tier of the newly created monster
      */
     onMonsterMerged(newTier) {
+        // Give coins based on the tier
+        const coinsEarned = newTier * 5;
+        this.coins += coinsEarned;
+        
+        // Update UI
+        this.uiManager.updateMoneyDisplay(this.coins);
+        this.uiManager.showNotification(`Merged to Tier ${newTier}! +${coinsEarned} coins`, 'success');
+        
         // Update highest tier if needed
         if (newTier > this.highestTier) {
             this.highestTier = newTier;
             
-            // Unlock the next tier if it's not already unlocked
-            if (!this.unlockedMonsters.includes(newTier + 1)) {
-                this.unlockedMonsters.push(newTier + 1);
-                this.uiManager.showNotification(`Unlocked Tier ${newTier + 1} monster!`, 'success');
+            // Unlock the new tier in the game
+            if (!this.unlockedMonsters.includes(newTier)) {
+                this.unlockedMonsters.push(newTier);
+                
+                // Update shop items to include the new tier
+                this.shopItems = this.storageManager.generateShopItems(this.unlockedMonsters);
+                
+                // Refresh shop if it's open
+                const shopOverlay = document.getElementById('shop-overlay');
+                if (shopOverlay && !shopOverlay.classList.contains('hidden')) {
+                    this.uiManager.openShop();
+                }
             }
         }
-        
-        // Award coins for merging
-        const mergeBonus = newTier * 5;
-        this.coins += mergeBonus;
-        this.uiManager.updateMoneyDisplay(this.coins);
-        this.uiManager.showNotification(`Merged to Tier ${newTier}! +${mergeBonus} coins`, 'success');
         
         // Save game state
         this.saveGameState();
@@ -336,7 +440,15 @@ class Game {
      * @returns {Array} Array of unlocked monster tiers
      */
     getUnlockedTiers() {
-        return this.unlockedMonsters || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        return this.unlockedMonsters || [1];
+    }
+    
+    /**
+     * Get current shop items
+     * @returns {Array} Shop items
+     */
+    getShopItems() {
+        return this.shopItems;
     }
     
     /**
@@ -350,7 +462,10 @@ class Game {
         this.coins = 100;
         this.wave = 1;
         this.highestTier = 1;
-        this.unlockedMonsters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        this.unlockedMonsters = [1, 2, 3, 4, 5]; // Start with tiers 1-5 unlocked for testing
+        
+        // Generate new shop items
+        this.shopItems = this.storageManager.generateShopItems(this.unlockedMonsters);
         
         // Update UI
         this.uiManager.updateMoneyDisplay(this.coins);
@@ -359,8 +474,46 @@ class Game {
         // Save the reset state
         this.saveGameState();
         
+        // Force refresh of the shop if it's currently open
+        if (this.uiManager && this.uiManager.overlayManager) {
+            const shopOverlay = document.getElementById('shop-overlay');
+            if (shopOverlay && !shopOverlay.classList.contains('hidden')) {
+                this.uiManager.overlayManager.closeShop();
+                this.uiManager.openShop();
+            }
+        }
+        
         // Show notification
         this.uiManager.showNotification('Game restarted!', 'info');
+    }
+    
+    /**
+     * Upgrade to the next wave and give rewards
+     */
+    upgradeWave() {
+        this.wave++;
+        
+        // Give coins based on the wave
+        const coinsEarned = this.wave * 10;
+        this.coins += coinsEarned;
+        
+        // Update unlocked monsters based on wave progress
+        // Unlock up to tier 5 gradually as waves progress
+        const maxTierToUnlock = Math.min(Math.floor(this.wave / 2) + 1, 5);
+        for (let i = 1; i <= maxTierToUnlock; i++) {
+            if (!this.unlockedMonsters.includes(i)) {
+                this.unlockedMonsters.push(i);
+            }
+        }
+        
+        // Update UI
+        this.uiManager.updateMoneyDisplay(this.coins);
+        this.uiManager.updateWaveDisplay(this.wave);
+        
+        // Save game state
+        this.saveGameState();
+        
+        return coinsEarned;
     }
 }
 
